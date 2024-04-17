@@ -14,21 +14,23 @@ class EmployeeController extends Controller
     public function index(Request $request)
     {
         if ($request->ajax()) {
-            $query = $request->get('query', ''); // Get the search term
+            $keyword = $request->get('query');
+            $employees = Employee::where('first_name', 'LIKE', "%$keyword%")
+                                 ->orWhere('last_name', 'LIKE', "%$keyword%")
+                                 ->with('company') // Ensure you have the company relationship
+                                 ->get();
     
-            // Perform the search. Adjust the query according to your needs.
-            $employees = Employee::where('first_name', 'like', "%{$query}%")
-                ->orWhere('last_name', 'like', "%{$query}%")
-                ->with('company') // Assuming you have a company relationship
-                ->get();
-    
-            // Return a partial view with the filtered list of employees
-            return view('partials.employees_list', compact('employees'))->render();
+            return response()->json([
+                'view' => view('partials.employees_list', compact('employees'))->render(),
+            ]);
+        } else {
+            $employees = Employee::with('company')->paginate(10);
+            return view('employees.index', compact('employees'));
         }
-
+    
         // Your existing code to display the page initially
         $employees = Employee::with('company')->paginate(2);
-        $companies = Company::get();
+        $companies = Company::all();
         return view('employees.index', compact('employees','companies'));
     }
     
